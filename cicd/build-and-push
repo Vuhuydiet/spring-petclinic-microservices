@@ -86,6 +86,7 @@ pipeline {
             when { branch 'main-p2' }
             steps {
                 script {
+                    def valuesFilepath = 'spring-petclinic-chart/environments/dev/values.yaml'
                     // recompute commitId and clone deployment repo
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     dir('spring-petclinic-deployment') {
@@ -113,14 +114,14 @@ pipeline {
                             sh """
                               yq e -i '\
                               .${svr}.image.tag        = \"${commitId}\"' \
-                                environments/dev/values.yaml
+                                ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
                               yq e -i '\
                               .services.${svc}.image.tag        = \"${commitId}\"' \
-                                environments/dev/values.yaml
+                                ${valuesFilepath}
                             """
                         }
                         // commit & push changes
@@ -141,6 +142,7 @@ pipeline {
             when { tag '*' }
             steps {
                 script {
+                    def valuesFilepath = 'spring-petclinic-chart/environments/staging/values.yaml'
                     // use the Git tag for staging image tags
                     def tagName = env.GIT_TAG
                     dir('spring-petclinic-deployment') {
@@ -168,14 +170,14 @@ pipeline {
                             sh """
                               yq e -i '\
                               .${svr}.image.tag        = \"${tagName}\"' \
-                                environments/staging/values.yaml
+                                ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
                               yq e -i '\
                               .services.${svc}.image.tag        = \"${tagName}\"' \
-                                environments/staging/values.yaml
+                                ${valuesFilepath}
                             """
                         }
                         // commit & push changes back to master

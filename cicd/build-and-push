@@ -12,7 +12,12 @@ pipeline {
     
     stages {
         stage('Prepare') {
-            when { branch 'main-p2' }
+            when {
+                anyOf {
+                    branch 'main-p2'
+                    tag '*'
+                } 
+            }
             steps {
                 script {
                     // capture current Git tag into environment
@@ -24,13 +29,25 @@ pipeline {
             }
         }
         
-        stage('Build and Push Images') {
-            when { branch 'main-p2' }
+        stage('Build and Push Images ') {
+            when {
+                anyOf {
+                    branch 'main-p2'
+                    tag '*'
+                } 
+            }
             steps {
                 script {
+                    def branchName = env.BRANCH_NAME
+
                     // Get commit ID for tagging
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def branchName = env.BRANCH_NAME
+                    def gitTag = sh(script: 'git describe --exact-match --tags', returnStdout: true).trim()
+                    
+                    def imageTag = commitId
+                    if (gitTag) {
+                        imageTag = gitTag
+                    }
                     
                     // Get all service directories based on actual project structure
                     def services = [
@@ -53,11 +70,11 @@ pipeline {
                             sh "./mvnw clean install -P buildDocker -DskipTests"
                             
                             // Tag the locally built image with our naming convention
-                            sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:${commitId}"
+                            sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:${imageTag}"
                             sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:main"
                             
                             // Push both tags
-                            sh "docker push ${DOCKERHUB}/${service}:${commitId}"
+                            sh "docker push ${DOCKERHUB}/${service}:${imageTag}"
                             sh "docker push ${DOCKERHUB}/${service}:main"
                         }
                     }
@@ -81,19 +98,27 @@ pipeline {
                             ]]
                         ])
                         // update image tags in dev values.yaml using yq
-                        def services = [
+                        def servers = [
                             'spring-petclinic-config-server',
                             'spring-petclinic-discovery-server',
                             'spring-petclinic-api-gateway',
+                            'spring-petclinic-admin-server',
+                        ]
+                        def services = [
                             'spring-petclinic-customers-service',
                             'spring-petclinic-vets-service',
                             'spring-petclinic-visits-service',
-                            'spring-petclinic-admin-server',
                         ]
+                        servers.each { svr ->
+                            sh """
+                              yq e -i '\
+                              .${svr}.image.tag        = \"${commitId}\"' \
+                                environments/dev/values.yaml
+                            """
+                        }
                         services.each { svc ->
                             sh """
                               yq e -i '\
-                              .services.${svc}.image.repository = \"${DOCKERHUB}/${svc}\" | \
                               .services.${svc}.image.tag        = \"${commitId}\"' \
                                 environments/dev/values.yaml
                             """
@@ -128,19 +153,27 @@ pipeline {
                             ]]
                         ])
                         // update image tags in staging values.yaml
-                        def services = [
+                        def servers = [
                             'spring-petclinic-config-server',
                             'spring-petclinic-discovery-server',
                             'spring-petclinic-api-gateway',
+                            'spring-petclinic-admin-server',
+                        ]
+                        def services = [
                             'spring-petclinic-customers-service',
                             'spring-petclinic-vets-service',
                             'spring-petclinic-visits-service',
-                            'spring-petclinic-admin-server',
                         ]
+                        servers.each { svr ->
+                            sh """
+                              yq e -i '\
+                              .${svr}.image.tag        = \"${tagName}\"' \
+                                environments/staging/values.yaml
+                            """
+                        }
                         services.each { svc ->
                             sh """
                               yq e -i '\
-                              .services.${svc}.image.repository = \"${DOCKERHUB}/${svc}\" | \
                               .services.${svc}.image.tag        = \"${tagName}\"' \
                                 environments/staging/values.yaml
                             """

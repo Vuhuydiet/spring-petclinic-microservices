@@ -1,0 +1,162 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'API_GATEWAY_BRANCH', defaultValue: 'main', description: 'Branch for API Gateway')
+        string(name: 'CUSTOMERS_SERVICE_BRANCH', defaultValue: 'main', description: 'Branch for Customers Service')
+        string(name: 'VETS_SERVICE_BRANCH', defaultValue: 'main', description: 'Branch for Vets Service')
+        string(name: 'VISITS_SERVICE_BRANCH', defaultValue: 'main', description: 'Branch for Visits Service')
+        string(name: 'DISCOVERY_SERVER_BRANCH', defaultValue: 'main', description: 'Branch for Discovery Server')
+        string(name: 'ADMIN_SERVER_BRANCH', defaultValue: 'main', description: 'Branch for Admin Server')
+        string(name: 'CONFIG_SERVER_BRANCH', defaultValue: 'main', description: 'Branch for Config Server')
+        string(name: 'NAMESPACE', defaultValue: 'developer-test', description: 'Kubernetes namespace to deploy to')
+    }
+    
+    environment {
+        DOCKER_HUB_USERNAME = "vuhuydiet"
+        KUBE_CONFIG = credentials('kube-config')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Prepare Kubernetes') {
+            steps {
+                sh '''
+                    # Set up kubectl config
+                    mkdir -p ~/.kube
+                    echo "${KUBE_CONFIG}" > ~/.kube/config
+                    chmod 600 ~/.kube/config
+                    
+                    # Create namespace if it doesn't exist
+                    kubectl get namespace ${NAMESPACE} || kubectl create namespace ${NAMESPACE}
+                '''
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Map of service names to their parameters
+                    def serviceParams = [
+                        'config-server': params.CONFIG_SERVER_BRANCH,
+                        'discovery-server': params.DISCOVERY_SERVER_BRANCH,
+                        'api-gateway': params.API_GATEWAY_BRANCH,
+                        'customers-service': params.CUSTOMERS_SERVICE_BRANCH,
+                        'vets-service': params.VETS_SERVICE_BRANCH,
+                        'visits-service': params.VISITS_SERVICE_BRANCH,
+                        'admin-server': params.ADMIN_SERVER_BRANCH,
+                    ]
+                    
+                    // Service directory mapping
+                    def serviceDirectories = [
+                        'config-server': 'spring-petclinic-config-server',
+                        'discovery-server': 'spring-petclinic-discovery-server',
+                        'api-gateway': 'spring-petclinic-api-gateway',
+                        'customers-service': 'spring-petclinic-customers-service',
+                        'vets-service': 'spring-petclinic-vets-service',
+                        'visits-service': 'spring-petclinic-visits-service',
+                        'admin-server': 'spring-petclinic-admin-server',
+                    ]
+                    
+                    // For each service, determine the tag to use
+                    serviceParams.each { service, branch ->
+                        def imageTag = 'latest'  // Default tag
+                        def serviceDir = serviceDirectories[service]
+                        
+                        // If not using main branch, get the latest commit ID for that branch
+                        if (branch != 'main') {
+                            // This assumes you have access to the git repo and the branch exists
+                            dir(serviceDir) {
+                                sh "git checkout ${branch}"
+                                imageTag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                            }
+                        }
+                        
+                        // Define service-specific ports
+                        def servicePorts = [
+                            'api-gateway': 8080,
+                            'discovery-server': 8761,
+                            'config-server': 8888,
+                            'admin-server': 9090,
+                            'customers-service': 8081,
+                            'vets-service': 8083,
+                            'visits-service': 8082,
+                            'genai-service': 8084
+                        ]
+                        
+                        def containerPort = servicePorts[service] ?: 8080
+                        def servicePort = servicePorts[service] ?: 8080
+                        
+                        // Generate and apply Kubernetes deployment
+                        def deploymentYaml = """
+                        apiVersion: apps/v1
+                        kind: Deployment
+                        metadata:
+                          name: ${service}
+                          namespace: ${params.NAMESPACE}
+                          labels:
+                            app: ${service}
+                        spec:
+                          replicas: 1
+                          selector:
+                            matchLabels:
+                              app: ${service}
+                          template:
+                            metadata:
+                              labels:
+                                app: ${service}
+                            spec:
+                              containers:
+                              - name: ${service}
+                                image: ${DOCKER_HUB_USERNAME}/petclinic-${service}:${imageTag}
+                                ports:
+                                - containerPort: ${containerPort}
+                                env:
+                                - name: SPRING_PROFILES_ACTIVE
+                                  value: docker
+                                - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+                                  value: http://discovery-server:8761/eureka/
+                        ---
+                        apiVersion: v1
+                        kind: Service
+                        metadata:
+                          name: ${service}
+                          namespace: ${params.NAMESPACE}
+                        spec:
+                          type: ${service == 'api-gateway' || service == 'discovery-server' || service == 'admin-server' ? 'NodePort' : 'ClusterIP'}
+                          selector:
+                            app: ${service}
+                          ports:
+                          - port: ${servicePort}
+                            targetPort: ${containerPort}
+                        """
+                        
+                        // Write to file and apply
+                        writeFile file: "${service}-deployment.yaml", text: deploymentYaml
+                        sh "kubectl apply -f ${service}-deployment.yaml"
+                    }
+                }
+            }
+        }
+        
+        stage('Show Access URLs') {
+            steps {
+                script {
+                    // Get NodePort information for services
+                    sh """
+                        echo "Access URLs for services:"
+                        echo "---------------------------"
+                        kubectl get services -n ${params.NAMESPACE} -o wide
+                        echo "---------------------------"
+                        echo "Please add appropriate entries to your /etc/hosts file pointing to the worker node IP"
+                    """
+                }
+            }
+        }
+    }
+}

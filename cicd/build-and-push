@@ -67,7 +67,7 @@ pipeline {
                     services.each { service ->
                         dir(service) {
                             // Build with Maven first to create the JAR
-                            sh "./mvnw clean install -P buildDocker -DskipTests"
+                            sh "../mvnw clean install -P buildDocker -DskipTests"
                             
                             // Tag the locally built image with our naming convention
                             sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:${imageTag}"

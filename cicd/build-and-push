@@ -8,8 +8,6 @@ pipeline {
         // add deployment repo credentials and url
         DEPLOY_GIT_CREDS = credentials('gh-pat')
         DEPLOY_REPO_URL = 'git@github.com:Vuhuydiet/spring-petclinic-deployment.git'
-
-        GIT_TAG = sh(script: "git describe --exact-match --tags || echo ''", returnStdout: true).trim()
     }
     
     stages {
@@ -17,8 +15,11 @@ pipeline {
             when { branch 'main-p2' }
             steps {
                 script {
+                    // capture current Git tag into environment
+                    env.GIT_TAG = sh(script: "git describe --exact-match --tags || echo ''", returnStdout: true).trim()
+
                     echo "Branch: ${env.BRANCH_NAME}"
-                    echo "Tag: ${GIT_TAG}"
+                    echo "Tag: ${env.GIT_TAG}"
                 }
             }
         }

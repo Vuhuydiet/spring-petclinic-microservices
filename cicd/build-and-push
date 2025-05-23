@@ -10,12 +10,11 @@ pipeline {
         DEPLOY_REPO_URL = 'git@github.com:Vuhuydiet/spring-petclinic-deployment.git'
 
         GIT_TAG = sh(script: "git describe --exact-match --tags || echo ''", returnStdout: true).trim()
-        GIT_BRANCH = env.BRANCH_NAME
     }
     
     stages {
         stage('Prepare') {
-            when { branch 'master' }
+            when { branch 'main-p2' }
             steps {
                 script {
                     echo "Branch: ${env.BRANCH_NAME}"
@@ -25,7 +24,7 @@ pipeline {
         }
         
         stage('Build and Push Images') {
-            when { branch 'master' }
+            when { branch 'main-p2' }
             steps {
                 script {
                     // Get commit ID for tagging
@@ -54,11 +53,11 @@ pipeline {
                             
                             // Tag the locally built image with our naming convention
                             sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:${commitId}"
-                            sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:master"
+                            sh "docker tag ${service}:latest ${DOCKERHUB}/${service}:main"
                             
                             // Push both tags
                             sh "docker push ${DOCKERHUB}/${service}:${commitId}"
-                            sh "docker push ${DOCKERHUB}/${service}:master"
+                            sh "docker push ${DOCKERHUB}/${service}:main"
                         }
                     }
                 }
@@ -66,7 +65,7 @@ pipeline {
         }
         // new stage to update deployment values.yaml
         stage('Update dev values.yaml') {
-            when { branch 'master' }
+            when { branch 'main-p2' }
             steps {
                 script {
                     // recompute commitId and clone deployment repo

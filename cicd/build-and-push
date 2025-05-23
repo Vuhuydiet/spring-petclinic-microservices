@@ -6,7 +6,7 @@ pipeline {
         DOCKERHUB = "vuhuydiet"
 
         // add deployment repo credentials and url
-        DEPLOY_GIT_CREDS = credentials('gh-pat')
+        DEPLOY_GIT_CREDS = 'gh-pat'
         DEPLOY_REPO_URL = 'https://github.com/Vuhuydiet/spring-petclinic-deployment.git'
     }
     

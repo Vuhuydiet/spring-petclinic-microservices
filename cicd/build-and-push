@@ -71,11 +71,11 @@ pipeline {
                             
                             // Tag the locally built image with our naming convention
                             sh "docker tag springcommunity/${service}:latest ${DOCKERHUB}/${service}:${imageTag}"
-                            sh "docker tag springcommunity/${service}:latest ${DOCKERHUB}/${service}:main"
+                            sh "docker tag springcommunity/${service}:latest ${DOCKERHUB}/${service}:latest"
                             
                             // Push both tags
                             sh "docker push ${DOCKERHUB}/${service}:${imageTag}"
-                            sh "docker push ${DOCKERHUB}/${service}:main"
+                            sh "docker push ${DOCKERHUB}/${service}:latest"
                         }
                     }
                 }

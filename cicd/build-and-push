@@ -92,7 +92,8 @@ pipeline {
                 script {
                     def valuesFilepath = 'spring-petclinic-chart/environments/dev/values.yaml'
                     // recompute commitId and clone deployment repo
-                    def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    
                     dir('spring-petclinic-deployment') {
                         checkout([
                             $class: 'GitSCM',
@@ -104,24 +105,24 @@ pipeline {
                         ])
                         // update image tags in dev values.yaml using yq
                         def servers = [
-                            'spring-petclinic-config-server',
-                            'spring-petclinic-discovery-server',
-                            'spring-petclinic-api-gateway',
-                            'spring-petclinic-admin-server',
+                            'configServer',
+                            'discoveryServer',
+                            'apiGateway',
+                            'adminServer',
                         ]
                         def services = [
-                            'spring-petclinic-customers-service',
-                            'spring-petclinic-vets-service',
-                            'spring-petclinic-visits-service',
+                            'customersService',
+                            'vetsService',
+                            'visitsService',
                         ]
                         servers.each { svr ->
                             sh """
-                                yq e -i '.${svr}.image.tag = "${commitId}"' ${valuesFilepath}
+                                yq e -i '.${svr}.image.tag = "${tag}"' ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
-                                yq e -i '.services.${svc}.image.tag = "${commitId}"' ${valuesFilepath}
+                                yq e -i '.services.${svc}.image.tag = "${tag}"' ${valuesFilepath}
                             """
                         }
                         // commit & push changes
@@ -129,8 +130,8 @@ pipeline {
                             sh '''
                               git config user.name  "jenkins"
                               git config user.email "jenkins@your.org"
-                              git add spring-petclinic-chart/environments/dev/values.yaml
-                              git commit -m "ci: update dev image tags to ${commitId}"
+                              git add "${valuesFilepath}"
+                              git commit -m 'ci: update image tags in "${valuesFilepath}" to "${tag}"'
                               git push origin HEAD:master
                             '''.stripIndent()
                         }
@@ -144,7 +145,8 @@ pipeline {
                 script {
                     def valuesFilepath = 'spring-petclinic-chart/environments/staging/values.yaml'
                     // use the Git tag for staging image tags
-                    def tagName = env.GIT_TAG
+                    def tag = env.GIT_TAG
+                    
                     dir('spring-petclinic-deployment') {
                         checkout([
                             $class: 'GitSCM',
@@ -154,35 +156,35 @@ pipeline {
                                 credentialsId: DEPLOY_GIT_CREDS
                             ]]
                         ])
-                        // update image tags in staging values.yaml
+                        // update image tags in dev values.yaml using yq
                         def servers = [
-                            'spring-petclinic-config-server',
-                            'spring-petclinic-discovery-server',
-                            'spring-petclinic-api-gateway',
-                            'spring-petclinic-admin-server',
+                            'configServer',
+                            'discoveryServer',
+                            'apiGateway',
+                            'adminServer',
                         ]
                         def services = [
-                            'spring-petclinic-customers-service',
-                            'spring-petclinic-vets-service',
-                            'spring-petclinic-visits-service',
+                            'customersService',
+                            'vetsService',
+                            'visitsService',
                         ]
                         servers.each { svr ->
                             sh """
-                                yq e -i '.${svr}.image.tag = "${tagName}"' ${valuesFilepath}
+                                yq e -i '.${svr}.image.tag = "${tag}"' ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
-                                yq e -i '.services.${svc}.image.tag = "${tagName}"' ${valuesFilepath}
+                                yq e -i '.services.${svc}.image.tag = "${tag}"' ${valuesFilepath}
                             """
                         }
-                        // commit & push changes back to master
+                        // commit & push changes
                         sshagent([DEPLOY_GIT_CREDS]) {
                             sh '''
                               git config user.name  "jenkins"
                               git config user.email "jenkins@your.org"
-                              git add spring-petclinic-chart/environments/staging/values.yaml
-                              git commit -m "ci: update staging image tags to ${tagName}"
+                              git add "${valuesFilepath}"
+                              git commit -m 'ci: update image tags in "${valuesFilepath}" to "${tag}"'
                               git push origin HEAD:master
                             '''.stripIndent()
                         }

@@ -42,7 +42,7 @@ pipeline {
 
                     // Get commit ID for tagging
                     def commitId = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def gitTag = env.GET_TAG
+                    def gitTag = env.GIT_TAG
                     
                     def imageTag = commitId
                     if (gitTag) {

@@ -12,7 +12,11 @@ pipeline {
     
     stages {
         stage('Build and Push Images ') {
-            when { env.BRANCH_NAME ==~ /^v\d+\.\d+\.\d+$/  }
+            when { 
+                expression {
+                    return env.GIT_BRANCH ==~ /^refs\/tags\/.*/
+                }
+            }
             steps {
                 script {
                     def imageTag = env.BRANCH_NAME
@@ -54,7 +58,11 @@ pipeline {
         }
       
         stage('Update staging values.yaml') {
-            when { env.BRANCH_NAME ==~ /^v\d+\.\d+\.\d+$/  }
+            when {
+                expression {
+                    return env.GIT_BRANCH ==~ /^refs\/tags\/.*/
+                }
+            }
             steps {
                 script {
                     def valuesFilepath = 'spring-petclinic-chart/environments/staging/values.yaml'

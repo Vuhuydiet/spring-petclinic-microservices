@@ -1,0 +1,120 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_HUB_CREDS = credentials('dockerhub-user')
+        DOCKERHUB = "vuhuydiet"
+
+        // add deployment repo credentials and url
+        DEPLOY_GIT_CREDS = 'github-ssh-key'
+        DEPLOY_REPO_URL = 'git@github.com:Vuhuydiet/spring-petclinic-deployment.git'
+    }
+    
+    stages {
+        stage('Build and Push Images ') {
+            when { branch 'main-p2' }
+            steps {
+                script {
+                    def branchName = env.BRANCH_NAME
+
+                    // Get commit ID for tagging
+                    def imageTag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    
+                    // Get all service directories based on actual project structure
+                    def services = [
+                        'spring-petclinic-config-server',
+                        'spring-petclinic-discovery-server',
+                        'spring-petclinic-api-gateway',
+                        'spring-petclinic-customers-service', 
+                        'spring-petclinic-vets-service',
+                        'spring-petclinic-visits-service',
+                        'spring-petclinic-admin-server',
+                    ]
+                    
+                    // Login to Docker Hub
+                    sh "echo $DOCKER_HUB_CREDS_PSW | docker login -u $DOCKER_HUB_CREDS_USR --password-stdin"
+                    
+                    // Build and push each service
+                    services.each { service ->
+                        dir(service) {
+                            // Build with Maven first to create the JAR
+                            sh "../mvnw clean install -P buildDocker -DskipTests"
+                            
+                            // Tag the locally built image with our naming convention
+                            sh "docker tag springcommunity/${service}:latest ${DOCKERHUB}/${service}:${imageTag}"
+                            sh "docker tag springcommunity/${service}:latest ${DOCKERHUB}/${service}:latest"
+                            
+                            // Push both tags
+                            sh "docker push ${DOCKERHUB}/${service}:${imageTag}"
+                            sh "docker push ${DOCKERHUB}/${service}:latest"
+
+                            sh "docker rmi ${DOCKERHUB}/${service}:${imageTag}"
+                            sh "docker rmi ${DOCKERHUB}/${service}:latest"
+                            sh "docker rmi springcommunity/${service}:latest"
+                        }
+                    }
+                }
+            }
+        }
+        // new stage to update deployment values.yaml
+        stage('Update dev values.yaml') {
+            when { branch 'main-p2' }
+            steps {
+                script {
+                    def valuesFilepath = 'spring-petclinic-chart/environments/dev/values.yaml'
+                    // recompute commitId and clone deployment repo
+                    def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    
+                    dir('spring-petclinic-deployment') {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: [[ name: 'master' ]],
+                            userRemoteConfigs: [[
+                                url: DEPLOY_REPO_URL,
+                                credentialsId: DEPLOY_GIT_CREDS
+                            ]]
+                        ])
+                        // update image tags in dev values.yaml using yq
+                        def servers = [
+                            'configServer',
+                            'discoveryServer',
+                            'apiGateway',
+                            'adminServer',
+                        ]
+                        def services = [
+                            'customersService',
+                            'vetsService',
+                            'visitsService',
+                        ]
+                        servers.each { svr ->
+                            sh """
+                                yq e -i '.${svr}.image.tag = "${tag}"' ${valuesFilepath}
+                            """
+                        }
+                        services.each { svc ->
+                            sh """
+                                yq e -i '.services.${svc}.image.tag = "${tag}"' ${valuesFilepath}
+                            """
+                        }
+                        // commit & push changes
+                        sshagent([DEPLOY_GIT_CREDS]) {
+                            sh """
+                              git config user.name  "jenkins"
+                              git config user.email "jenkins@your.org"
+                              git add "${valuesFilepath}"
+                              git commit -m 'ci: update image tags in "${valuesFilepath}" to "${tag}"'
+                              git push origin HEAD:master
+                            """.stripIndent()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh "docker logout"
+        }
+    }
+}

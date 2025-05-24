@@ -14,7 +14,7 @@ pipeline {
         stage('Build and Push Images ') {
             when { 
                 expression {
-                    return env.GIT_BRANCH ==~ /^refs\/tags\/.*/
+                    return env.GIT_BRANCH ==~ /^v\d+\.\d+\.\d+$/
                 }
             }
             steps {
@@ -60,7 +60,7 @@ pipeline {
         stage('Update staging values.yaml') {
             when {
                 expression {
-                    return env.GIT_BRANCH ==~ /^refs\/tags\/.*/
+                    return env.GIT_BRANCH ==~ /^v\d+\.\d+\.\d+$/
                 }
             }
             steps {

@@ -127,13 +127,13 @@ pipeline {
                         }
                         // commit & push changes
                         sshagent([DEPLOY_GIT_CREDS]) {
-                            sh '''
+                            sh """
                               git config user.name  "jenkins"
                               git config user.email "jenkins@your.org"
                               git add "${valuesFilepath}"
                               git commit -m 'ci: update image tags in "${valuesFilepath}" to "${tag}"'
                               git push origin HEAD:master
-                            '''.stripIndent()
+                            """.stripIndent()
                         }
                     }
                 }
@@ -180,13 +180,13 @@ pipeline {
                         }
                         // commit & push changes
                         sshagent([DEPLOY_GIT_CREDS]) {
-                            sh '''
+                            sh """
                               git config user.name  "jenkins"
                               git config user.email "jenkins@your.org"
                               git add "${valuesFilepath}"
                               git commit -m 'ci: update image tags in "${valuesFilepath}" to "${tag}"'
                               git push origin HEAD:master
-                            '''.stripIndent()
+                            """.stripIndent()
                         }
                     }
                 }

@@ -45,9 +45,6 @@ pipeline {
                             
                             // Push both tags
                             sh "docker push ${DOCKERHUB}/${service}:${imageTag}"
-
-                            sh "docker rmi ${DOCKERHUB}/${service}"
-                            sh "docker rmi springcommunity/${service}"
                         }
                     }
                 }

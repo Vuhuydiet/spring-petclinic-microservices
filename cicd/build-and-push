@@ -116,16 +116,12 @@ pipeline {
                         ]
                         servers.each { svr ->
                             sh """
-                              yq e -i '\
-                              .${svr}.image.tag        = \"${commitId}\"' \
-                                ${valuesFilepath}
+                                yq e -i '.${svr}.image.tag = "${commitId}"' ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
-                              yq e -i '\
-                              .services.${svc}.image.tag        = \"${commitId}\"' \
-                                ${valuesFilepath}
+                                yq e -i '.services.${svc}.image.tag = "${commitId}"' ${valuesFilepath}
                             """
                         }
                         // commit & push changes
@@ -135,7 +131,7 @@ pipeline {
                               git config user.email "jenkins@your.org"
                               git add spring-petclinic-chart/environments/dev/values.yaml
                               git commit -m "ci: update dev image tags to ${commitId}"
-                              git push origin master
+                              git push origin HEAD:master
                             '''.stripIndent()
                         }
                     }
@@ -172,16 +168,12 @@ pipeline {
                         ]
                         servers.each { svr ->
                             sh """
-                              yq e -i '\
-                              .${svr}.image.tag        = \"${tagName}\"' \
-                                ${valuesFilepath}
+                                yq e -i '.${svr}.image.tag = "${tagName}"' ${valuesFilepath}
                             """
                         }
                         services.each { svc ->
                             sh """
-                              yq e -i '\
-                              .services.${svc}.image.tag        = \"${tagName}\"' \
-                                ${valuesFilepath}
+                                yq e -i '.services.${svc}.image.tag = "${tagName}"' ${valuesFilepath}
                             """
                         }
                         // commit & push changes back to master
@@ -191,7 +183,7 @@ pipeline {
                               git config user.email "jenkins@your.org"
                               git add spring-petclinic-chart/environments/staging/values.yaml
                               git commit -m "ci: update staging image tags to ${tagName}"
-                              git push origin master
+                              git push origin HEAD:master
                             '''.stripIndent()
                         }
                     }

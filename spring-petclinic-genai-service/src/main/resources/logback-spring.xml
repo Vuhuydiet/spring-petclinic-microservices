@@ -1,6 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <include resource="org/springframework/boot/logging/logback/base.xml"/>
-    <!-- Required for Loglevel managment into the Spring Petclinic Admin Server-->
-    <jmxConfigurator/>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    
+    <!-- Console appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %X{traceId:-} %X{spanId:-} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Loki appender -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>http://loki:3100/loki/api/v1/push</url>
+        </http>
+        <format>
+            <label>
+                <pattern>application=${spring.application.name:-unknown},host=${HOSTNAME:-localhost},level=%level</pattern>
+            </label>
+            <message>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %X{traceId:-} %X{spanId:-} %msg%n</pattern>
+            </message>
+        </format>
+    </appender>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="LOKI"/>
+    </root>
+
+    <!-- Spring framework logging -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.springframework.web" level="DEBUG"/>
+    
+    <!-- Hibernate/JPA logging -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    
+    <!-- Application logging -->
+    <logger name="org.springframework.samples.petclinic" level="DEBUG"/>
 </configuration>

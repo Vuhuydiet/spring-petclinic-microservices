@@ -12,7 +12,7 @@ pipeline {
     
     stages {
         stage('Build and Push Images ') {
-            when { branch 'main-p2' }
+            when { branch 'main-p3' }
             steps {
                 script {
                     def branchName = env.BRANCH_NAME
@@ -54,7 +54,7 @@ pipeline {
         }
         // new stage to update deployment values.yaml
         stage('Update dev values.yaml') {
-            when { branch 'main-p2' }
+            when { branch 'main-p3' }
             steps {
                 script {
                     def valuesFilepath = 'spring-petclinic-chart/environments/dev/values.yaml'

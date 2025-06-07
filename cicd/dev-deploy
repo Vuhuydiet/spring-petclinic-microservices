@@ -74,13 +74,13 @@ pipeline {
                         def servers = [
                             'configServer',
                             'discoveryServer',
-                            'apiGateway',
-                            'adminServer',
                         ]
                         def services = [
                             'customersService',
                             'vetsService',
                             'visitsService',
+                            'apiGateway',
+                            'adminServer',
                         ]
                         servers.each { svr ->
                             sh """

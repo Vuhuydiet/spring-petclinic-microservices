@@ -2,49 +2,42 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     
-    <springProfile name="!local">
-        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-            <http>
-                <url>http://loki:3100/loki/api/v1/push</url>
-            </http>
-            <format>
-                <label>
-                    <pattern>application=${spring.application.name:-unknown},host=${HOSTNAME:-unknown},level=%level</pattern>
-                    <readMarkers>true</readMarkers>
-                </label>
-                <message>
-                    <pattern>
-                        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
-                    </pattern>
-                </message>
-                <sortByTime>true</sortByTime>
-            </format>
-        </appender>
-    </springProfile>
-    
+    <!-- Console appender -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
+            <pattern>%clr(%d{${LOG_DATEFORMAT_PATTERN:-yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %X{traceId:-} %X{spanId:-} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}</pattern>
         </encoder>
     </appender>
 
+    <!-- Loki appender -->
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+            <url>http://loki:3100/loki/api/v1/push</url>
+        </http>
+        <format>
+            <label>
+                <pattern>application=${spring.application.name:-unknown},host=${HOSTNAME:-localhost},level=%level</pattern>
+            </label>
+            <message>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %X{traceId:-} %X{spanId:-} %msg%n</pattern>
+            </message>
+        </format>
+    </appender>
+
+    <!-- Root logger -->
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
-        <springProfile name="!local">
-            <appender-ref ref="LOKI"/>
-        </springProfile>
+        <appender-ref ref="LOKI"/>
     </root>
 
-    <!-- Reduce noise from Spring framework -->
-    <logger name="org.springframework" level="WARN"/>
-    <logger name="org.springframework.web" level="INFO"/>
-    <logger name="org.springframework.boot" level="INFO"/>
-    <logger name="org.springframework.cloud" level="INFO"/>
+    <!-- Spring framework logging -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.springframework.web" level="DEBUG"/>
     
-    <!-- Application specific logging -->
+    <!-- Hibernate/JPA logging -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    
+    <!-- Application logging -->
     <logger name="org.springframework.samples.petclinic" level="DEBUG"/>
-    
-    <!-- Tracing related logs -->
-    <logger name="brave" level="INFO"/>
-    <logger name="zipkin2" level="INFO"/>
 </configuration>

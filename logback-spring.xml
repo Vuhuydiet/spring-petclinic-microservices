@@ -13,9 +13,7 @@
                     <readMarkers>true</readMarkers>
                 </label>
                 <message>
-                    <pattern>
-                        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
-                    </pattern>
+                    <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
                 </message>
                 <sortByTime>true</sortByTime>
             </format>

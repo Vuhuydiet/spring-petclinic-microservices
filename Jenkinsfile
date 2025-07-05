@@ -12,7 +12,6 @@ pipeline {
             spring-petclinic-vets-service
             spring-petclinic-visits-service
         """
-        CODECOV_TOKEN = credentials('codecov_token')
         COVERAGE_THRESHOLD = 70
     }
 

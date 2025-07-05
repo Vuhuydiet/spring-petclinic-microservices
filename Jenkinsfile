@@ -114,12 +114,6 @@ pipeline {
                         } else {
                             echo "⚠️ Coverage file not found for ${svc}. Skipping coverage check."
                         }
-
-                        // Upload coverage to Codecov
-                        sh '''
-                            curl -s https://codecov.io/bash -o codecov.sh
-                            bash codecov.sh -t $CODECOV_TOKEN -F $svc -s $svc/target
-                        '''
                     }
                 }
             }

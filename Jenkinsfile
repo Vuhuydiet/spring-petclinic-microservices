@@ -82,17 +82,17 @@ pipeline {
                             def lineMissedMatches = (coverageXml =~ /counter type="LINE".*?missed="(\d+)"/)
                             
                             // Check if we have matches
-                            if (lineCoveredMatches.count > 0 && lineMissedMatches.count > 0) {
+                            if (lineCoveredMatches.size() > 0 && lineMissedMatches.size() > 0) {
                                 // Sum up all covered and missed lines
                                 def totalCovered = 0
                                 def totalMissed = 0
                                 
                                 // Process all matches
-                                for (int i = 0; i < lineCoveredMatches.count; i++) {
+                                for (int i = 0; i < lineCoveredMatches.size(); i++) {
                                     totalCovered += lineCoveredMatches[i][1].toDouble()
                                 }
                                 
-                                for (int i = 0; i < lineMissedMatches.count; i++) {
+                                for (int i = 0; i < lineMissedMatches.size(); i++) {
                                     totalMissed += lineMissedMatches[i][1].toDouble()
                                 }
                                 
